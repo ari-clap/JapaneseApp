@@ -1,10 +1,17 @@
 import { useState, useEffect } from "react";
 import { CATS } from "./data/phrases.js";
 import { convertReading, convertKana, PURE_PARTICLES, addRomajiSpacing } from "./lib/romaji.js";
-import { speak, stopSpeech, isSpeechSupported } from "./lib/speech.js";
+import { speak, stopSpeech, isSpeechSupported, getJapaneseVoices } from "./lib/speech.js";
 import { supabase, isSupabaseConfigured } from "./lib/supabase.js";
 import { signInWithGoogle, signOut } from "./lib/auth.js";
 import { loadPhrases, addPhrase, removePhrase, migrateLocalToCloud } from "./lib/phrasesStore.js";
+
+const GearIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+  </svg>
+);
 
 const CopyIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -62,7 +69,7 @@ function Ruby({ segs, readingMode = 'furigana' }) {
   );
 }
 
-function PhraseCard({ phrase, readingMode, deletable, onDelete }) {
+function PhraseCard({ phrase, readingMode, deletable, onDelete, voiceName }) {
   const [copied, setCopied] = useState(false);
   const [playing, setPlaying] = useState(false);
 
@@ -83,6 +90,7 @@ function PhraseCard({ phrase, readingMode, deletable, onDelete }) {
     speak(text, {
       onStart: () => setPlaying(true),
       onEnd: () => setPlaying(false),
+      voiceName,
     });
   };
 
@@ -99,8 +107,15 @@ function PhraseCard({ phrase, readingMode, deletable, onDelete }) {
       gap: "12px"
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: "var(--font-phrase)", lineHeight: readingMode === 'romaji' ? "1.5" : "2.4", color: "var(--color-text-primary)" }}>
-          <Ruby segs={phrase.segs} readingMode={readingMode} />
+        {/* Ghost (furigana) always rendered to lock the card height.
+            Active reading overlays it so the card never shifts. */}
+        <div style={{ position: 'relative', fontSize: "var(--font-phrase)", color: "var(--color-text-primary)" }}>
+          <div style={{ visibility: 'hidden', lineHeight: '2.4', pointerEvents: 'none', userSelect: 'none' }} aria-hidden="true">
+            <Ruby segs={phrase.segs} readingMode="furigana" />
+          </div>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center' }}>
+            <Ruby segs={phrase.segs} readingMode={readingMode} />
+          </div>
         </div>
         <div style={{ fontSize: "var(--font-body)", color: "var(--color-text-secondary)", marginTop: "2px" }}>{phrase.en}</div>
       </div>
@@ -238,6 +253,8 @@ export default function App() {
   const [jaInput, setJaInput] = useState("");
   const [enInput, setEnInput] = useState("");
   const [session, setSession] = useState(null);
+  const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('jp_voice') || '');
+  const [voices, setVoices] = useState([]);
 
   // Track the signed-in session (only if Supabase is configured).
   useEffect(() => {
@@ -264,6 +281,31 @@ export default function App() {
     })();
     return () => { cancelled = true; };
   }, [session]);
+
+  // Load available Japanese voices. speechSynthesis.getVoices() is async on some
+  // browsers — it returns [] initially then fires voiceschanged when ready.
+  useEffect(() => {
+    if (!isSpeechSupported()) return;
+    const load = () => {
+      const jv = getJapaneseVoices();
+      setVoices(jv);
+      // Auto-select the first female voice (or first available) if nothing is stored yet
+      if (jv.length > 0 && !localStorage.getItem('jp_voice')) {
+        const firstFemale = jv.find(v => /ayumi|haruka|sayaka|kyoko|o-ren/.test(v.name.toLowerCase()));
+        const pick = firstFemale || jv[0];
+        setSelectedVoice(pick.name);
+        localStorage.setItem('jp_voice', pick.name);
+      }
+    };
+    load();
+    window.speechSynthesis.addEventListener('voiceschanged', load);
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', load);
+  }, []);
+
+  const handleVoiceChange = (name) => {
+    setSelectedVoice(name);
+    localStorage.setItem('jp_voice', name);
+  };
 
   const deletePhrase = async (id) => {
     setCustomPhrases(prev => prev.filter(p => p.id !== id));
@@ -329,7 +371,8 @@ export default function App() {
         background: "var(--color-background-primary)",
         borderBottom: "0.5px solid var(--color-border-tertiary)",
         padding: "var(--spacing-header)",
-        textAlign: "center"
+        textAlign: "center",
+        position: "relative"
       }}>
         <div style={{
           fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300,
@@ -339,6 +382,15 @@ export default function App() {
           fontSize: "var(--font-label)", color: "var(--color-text-tertiary)",
           letterSpacing: "0.2em", textTransform: "uppercase", marginTop: "2px"
         }}>Phrase Guide</div>
+        <button onClick={() => setView("settings")} title="Settings" style={{
+          position: "absolute", right: "var(--spacing-page-x)", top: "50%", transform: "translateY(-50%)",
+          background: "none", border: "0.5px solid var(--color-border-tertiary)",
+          borderRadius: "var(--border-radius-md)", padding: "7px 8px",
+          cursor: "pointer", color: "var(--color-text-secondary)",
+          display: "flex", alignItems: "center", justifyContent: "center"
+        }}>
+          <GearIcon />
+        </button>
       </div>
 
       <div className="category-grid">
@@ -402,7 +454,7 @@ export default function App() {
       />
       <div style={{ padding: "var(--spacing-page-y) var(--spacing-page-x)" }}>
         {selectedCat.phrases.map(p => (
-          <PhraseCard key={p.id} phrase={p} readingMode={readingMode} deletable={false} />
+          <PhraseCard key={p.id} phrase={p} readingMode={readingMode} deletable={false} voiceName={selectedVoice} />
         ))}
       </div>
     </div>
@@ -442,7 +494,7 @@ export default function App() {
           </div>
         ) : (
           customPhrases.map(p => (
-            <PhraseCard key={p.id} phrase={p} readingMode={readingMode} deletable={true} onDelete={() => deletePhrase(p.id)} />
+            <PhraseCard key={p.id} phrase={p} readingMode={readingMode} deletable={true} onDelete={() => deletePhrase(p.id)} voiceName={selectedVoice} />
           ))
         )}
       </div>
@@ -533,6 +585,132 @@ export default function App() {
         </button>
       </div>
     </div>
+    );
+  }
+
+  // ── Settings ───────────────────────────────────────────────────────────────
+  if (view === "settings") {
+    const femaleVoices = voices.filter(v => /ayumi|haruka|sayaka|kyoko|o-ren/.test(v.name.toLowerCase()));
+    const maleVoices   = voices.filter(v => /ichiro|keita|otoya|hattori/.test(v.name.toLowerCase()));
+
+    const currentGender = maleVoices.some(v => v.name === selectedVoice) ? 'male' : 'female';
+    const voicesOfGender = currentGender === 'female' ? femaleVoices : maleVoices;
+    const voiceIdx = Math.max(0, voicesOfGender.findIndex(v => v.name === selectedVoice));
+
+    const onGenderChange = (gender) => {
+      const list = gender === 'female' ? femaleVoices : maleVoices;
+      if (list.length > 0) handleVoiceChange(list[0].name);
+    };
+
+    // Short display name: "Microsoft Haruka - Japanese (Japan)" → "Haruka"
+    const friendlyName = selectedVoice
+      ? ((selectedVoice.match(/Microsoft\s+(\w+)/) || [])[1] || selectedVoice.split(/[\s\-]/)[0])
+      : '';
+
+    const CTRL_H = "38px";
+    const segBtn = (active, disabled = false, width = "52px") => ({
+      background: active ? "white" : "transparent",
+      color: disabled ? "#ccc" : active ? "#000" : "#555",
+      border: "none",
+      borderRadius: "7px",
+      padding: "0",
+      cursor: disabled ? "default" : "pointer",
+      fontFamily: "inherit",
+      fontSize: "var(--font-body)",
+      fontWeight: active ? 600 : 400,
+      boxShadow: active ? "0 1px 4px rgba(0,0,0,0.15), 0 0.5px 1px rgba(0,0,0,0.08)" : "none",
+      transition: "all 0.2s ease",
+      width,
+      height: "100%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    });
+
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--color-background-tertiary)" }}>
+        <Header onBack={() => setView("home")} title="Settings" />
+        <div style={{ padding: "var(--spacing-page-y) var(--spacing-page-x)", display: "flex", flexDirection: "column", gap: "16px" }}>
+
+          <div style={{
+            background: "var(--color-background-primary)",
+            border: "0.5px solid var(--color-border-tertiary)",
+            borderRadius: "var(--border-radius-lg)",
+            padding: "var(--spacing-card)"
+          }}>
+            {/* Header row: label + selected voice name */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <div style={{ fontSize: "var(--font-label)", color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                Voice
+              </div>
+              {friendlyName && (
+                <div style={{ fontSize: "var(--font-body)", color: "var(--color-text-secondary)", fontWeight: 500 }}>
+                  {friendlyName}
+                </div>
+              )}
+            </div>
+
+            {!isSpeechSupported() ? (
+              <div style={{ fontSize: "var(--font-body)", color: "var(--color-text-secondary)" }}>
+                Text-to-speech is not supported in this browser.
+              </div>
+            ) : voices.length === 0 ? (
+              <div style={{ fontSize: "var(--font-body)", color: "var(--color-text-secondary)", lineHeight: "1.6" }}>
+                No Japanese voices found on this device.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+
+                {/* Gender row */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: CTRL_H }}>
+                  <span style={{ fontSize: "var(--font-label)", color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Gender</span>
+                  <div style={{ display: "inline-flex", background: "#E9E9EB", borderRadius: "9px", padding: "2px", height: "100%" }}>
+                    {[['female', '👩'], ['male', '👨']].map(([gender, emoji]) => {
+                      const hasVoices = (gender === 'female' ? femaleVoices : maleVoices).length > 0;
+                      return (
+                        <button key={gender}
+                          onClick={() => hasVoices && onGenderChange(gender)}
+                          style={{ ...segBtn(currentGender === gender, !hasVoices, "52px"), fontSize: "1.3em" }}
+                        >
+                          {emoji}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Type row */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: CTRL_H }}>
+                  <span style={{ fontSize: "var(--font-label)", color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em" }}>Type</span>
+                  <div style={{ display: "inline-flex", background: "#E9E9EB", borderRadius: "9px", padding: "2px", height: "100%" }}>
+                    {voicesOfGender.map((v, i) => (
+                      <button key={v.name} onClick={() => handleVoiceChange(v.name)}
+                        style={segBtn(voiceIdx === i, false, "44px")}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Test voice — full width */}
+                <button onClick={() => speak('こんにちは', { voiceName: selectedVoice || undefined })} style={{
+                  width: "100%", height: CTRL_H,
+                  background: "none", border: "0.5px solid var(--color-border-tertiary)",
+                  borderRadius: "var(--border-radius-md)",
+                  cursor: "pointer", fontSize: "var(--font-body)", color: "var(--color-text-secondary)",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: "6px"
+                }}>
+                  <SpeakerIcon playing={false} /> Test voice
+                </button>
+
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
     );
   }
 
