@@ -89,7 +89,7 @@ function PhraseCard({ phrase, readingMode, deletable, onDelete }) {
       background: "var(--color-background-primary)",
       border: "0.5px solid var(--color-border-tertiary)",
       borderRadius: "var(--border-radius-lg)",
-      padding: "1rem 1.25rem",
+      padding: "var(--spacing-card)",
       marginBottom: "8px",
       display: "flex",
       alignItems: "flex-start",
@@ -97,10 +97,10 @@ function PhraseCard({ phrase, readingMode, deletable, onDelete }) {
       gap: "12px"
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: "1.35rem", lineHeight: readingMode === 'romaji' ? "1.5" : "2.4", color: "var(--color-text-primary)" }}>
+        <div style={{ fontSize: "var(--font-phrase)", lineHeight: readingMode === 'romaji' ? "1.5" : "2.4", color: "var(--color-text-primary)" }}>
           <Ruby segs={phrase.segs} readingMode={readingMode} />
         </div>
-        <div style={{ fontSize: "13px", color: "var(--color-text-secondary)", marginTop: "2px" }}>{phrase.en}</div>
+        <div style={{ fontSize: "var(--font-body)", color: "var(--color-text-secondary)", marginTop: "2px" }}>{phrase.en}</div>
       </div>
       <div style={{ display: "flex", gap: "6px", flexShrink: 0, paddingTop: "6px" }}>
         {isSpeechSupported() && (
@@ -141,25 +141,24 @@ function PhraseCard({ phrase, readingMode, deletable, onDelete }) {
 
 function Header({ onBack, title, subtitle, right }) {
   return (
-    <div style={{
+    <div className="app-header" style={{
       background: "var(--color-background-primary, #ffffff)",
       borderBottom: "1px solid var(--color-border-tertiary, #e5e5e5)",
       boxShadow: "0 1px 8px rgba(0,0,0,0.06)",
-      padding: "0.875rem 1.25rem",
+      padding: "var(--spacing-header)",
       display: "flex", alignItems: "center", justifyContent: "space-between",
-      position: "sticky", top: 0, zIndex: 10
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
         {onBack && (
           <button onClick={onBack} style={{
             background: "none", border: "none", cursor: "pointer",
-            color: "var(--color-text-secondary)", fontSize: "18px", padding: "0 4px", lineHeight: 1
+            color: "var(--color-text-secondary)", fontSize: "var(--font-header-title)", padding: "0 4px", lineHeight: 1
           }}>←</button>
         )}
         <div>
-          <div style={{ fontSize: "15px", fontWeight: 500, color: "var(--color-text-primary)" }}>{title}</div>
+          <div style={{ fontSize: "var(--font-header-title)", fontWeight: 500, color: "var(--color-text-primary)" }}>{title}</div>
           {subtitle && (
-            <div style={{ fontFamily: "'Noto Sans JP', sans-serif", fontSize: "11px", color: "var(--color-text-secondary)", fontWeight: 300 }}>
+            <div style={{ fontFamily: "'Noto Sans JP', sans-serif", fontSize: "var(--font-label)", color: "var(--color-text-secondary)", fontWeight: 300 }}>
               {subtitle}
             </div>
           )}
@@ -271,62 +270,62 @@ Rules:
       <div style={{
         background: "var(--color-background-primary)",
         borderBottom: "0.5px solid var(--color-border-tertiary)",
-        padding: "1.25rem 1.25rem 1rem",
+        padding: "var(--spacing-header)",
         textAlign: "center"
       }}>
         <div style={{
           fontFamily: "'Noto Sans JP', sans-serif", fontWeight: 300,
-          fontSize: "1.6rem", color: "var(--color-text-primary)", letterSpacing: "0.12em"
+          fontSize: "var(--font-title-ja)", color: "var(--color-text-primary)", letterSpacing: "0.12em"
         }}>日本語</div>
         <div style={{
-          fontSize: "11px", color: "var(--color-text-tertiary)",
+          fontSize: "var(--font-label)", color: "var(--color-text-tertiary)",
           letterSpacing: "0.2em", textTransform: "uppercase", marginTop: "2px"
         }}>Phrase Guide</div>
       </div>
 
-      <div style={{ padding: "1rem", display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" }}>
+      <div className="category-grid">
         {CATS.map(cat => (
           <button key={cat.id} onClick={() => { setSelectedCat(cat); setView("category"); }} style={{
             background: "var(--color-background-primary)",
             border: "0.5px solid var(--color-border-tertiary)",
             borderTop: `3px solid ${cat.accent}`,
             borderRadius: "var(--border-radius-lg)",
-            padding: "1rem",
+            padding: "var(--spacing-page-y) var(--spacing-page-x)",
             cursor: "pointer",
             textAlign: "left",
             display: "flex", flexDirection: "column", gap: "3px",
             transition: "border-color 0.15s"
           }}>
-            <span style={{ fontSize: "20px", lineHeight: 1, marginBottom: "4px" }}>{cat.icon}</span>
-            <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--color-text-primary)" }}>{cat.title}</span>
+            <span style={{ fontSize: "var(--cat-icon-size)", lineHeight: 1, marginBottom: "4px" }}>{cat.icon}</span>
+            <span style={{ fontSize: "var(--font-body)", fontWeight: 500, color: "var(--color-text-primary)" }}>{cat.title}</span>
             <span style={{
-              fontFamily: "'Noto Sans JP', sans-serif", fontSize: "11px",
+              fontFamily: "'Noto Sans JP', sans-serif", fontSize: "var(--font-label)",
               color: "var(--color-text-secondary)", fontWeight: 300
             }}>{cat.ja}</span>
-            <span style={{ fontSize: "11px", color: "var(--color-text-tertiary)", marginTop: "2px" }}>
+            <span style={{ fontSize: "var(--font-label)", color: "var(--color-text-tertiary)", marginTop: "2px" }}>
               {cat.phrases.length} phrases
             </span>
           </button>
         ))}
       </div>
 
-      <div style={{ padding: "0 1rem 2rem" }}>
+      <div style={{ padding: "0 var(--spacing-page-x) 2rem" }}>
         <button onClick={() => setView("myphrases")} style={{
           width: "100%",
           background: "var(--color-background-primary)",
           border: "0.5px solid var(--color-border-secondary)",
           borderRadius: "var(--border-radius-lg)",
-          padding: "1rem 1.25rem",
+          padding: "var(--spacing-card)",
           cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "space-between"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--color-text-primary)" }}>My Phrases</span>
-            <span style={{ fontSize: "11px", color: "var(--color-text-tertiary)", fontFamily: "'Noto Sans JP', sans-serif" }}>
+            <span style={{ fontSize: "var(--font-body)", fontWeight: 500, color: "var(--color-text-primary)" }}>My Phrases</span>
+            <span style={{ fontSize: "var(--font-label)", color: "var(--color-text-tertiary)", fontFamily: "'Noto Sans JP', sans-serif" }}>
               マイフレーズ
             </span>
           </div>
-          <span style={{ fontSize: "12px", color: "var(--color-text-tertiary)" }}>
+          <span style={{ fontSize: "var(--font-label)", color: "var(--color-text-tertiary)" }}>
             {customPhrases.length} saved →
           </span>
         </button>
@@ -343,7 +342,7 @@ Rules:
         subtitle={selectedCat.ja}
         right={readingToggle}
       />
-      <div style={{ padding: "1rem" }}>
+      <div style={{ padding: "var(--spacing-page-y) var(--spacing-page-x)" }}>
         {selectedCat.phrases.map(p => (
           <PhraseCard key={p.id} phrase={p} readingMode={readingMode} deletable={false} />
         ))}
@@ -366,19 +365,19 @@ Rules:
               border: "0.5px solid var(--color-border-secondary)",
               borderRadius: "var(--border-radius-md)",
               padding: "5px 12px", cursor: "pointer",
-              fontSize: "13px", fontWeight: 500, color: "var(--color-text-primary)"
+              fontSize: "var(--font-body)", fontWeight: 500, color: "var(--color-text-primary)"
             }}>+ Add</button>
           </div>
         }
       />
-      <div style={{ padding: "1rem" }}>
+      <div style={{ padding: "var(--spacing-page-y) var(--spacing-page-x)" }}>
         {customPhrases.length === 0 ? (
           <div style={{ textAlign: "center", padding: "3rem 1rem" }}>
             <div style={{
-              fontFamily: "'Noto Sans JP', sans-serif", fontSize: "1.5rem",
+              fontFamily: "'Noto Sans JP', sans-serif", fontSize: "var(--font-phrase)",
               color: "var(--color-text-tertiary)", marginBottom: "10px", fontWeight: 300
             }}>まだありません</div>
-            <div style={{ fontSize: "13px", color: "var(--color-text-tertiary)", lineHeight: "1.6" }}>
+            <div style={{ fontSize: "var(--font-body)", color: "var(--color-text-tertiary)", lineHeight: "1.6" }}>
               No custom phrases yet.<br />Tap <strong>+ Add</strong> to generate one with AI.
             </div>
           </div>
@@ -400,15 +399,15 @@ Rules:
         subtitle="Describe what you want to say in English"
       />
 
-      <div style={{ flex: 1, padding: "1rem", display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div style={{ flex: 1, padding: "var(--spacing-page-y) var(--spacing-page-x)", display: "flex", flexDirection: "column", gap: "12px" }}>
         <div style={{
           background: "var(--color-background-primary)",
           border: "0.5px solid var(--color-border-tertiary)",
           borderRadius: "var(--border-radius-lg)",
-          padding: "1rem 1.25rem"
+          padding: "var(--spacing-card)"
         }}>
           <div style={{
-            fontSize: "11px", color: "var(--color-text-tertiary)",
+            fontSize: "var(--font-label)", color: "var(--color-text-tertiary)",
             textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px"
           }}>What do you want to say?</div>
           <textarea
@@ -418,7 +417,7 @@ Rules:
             rows={3}
             style={{
               width: "100%", border: "none", outline: "none", resize: "none",
-              fontSize: "14px", lineHeight: "1.6", color: "var(--color-text-primary)",
+              fontSize: "var(--font-body)", lineHeight: "1.6", color: "var(--color-text-primary)",
               background: "transparent", fontFamily: "inherit",
               boxSizing: "border-box"
             }}
@@ -438,7 +437,7 @@ Rules:
                   : "var(--color-text-primary)",
                 borderRadius: "var(--border-radius-md)",
                 padding: "6px 16px", cursor: chatLoading ? "wait" : "pointer",
-                fontSize: "13px", fontWeight: 500
+                fontSize: "var(--font-body)", fontWeight: 500
               }}
             >
               {chatLoading ? "Generating…" : "Generate →"}
@@ -448,7 +447,7 @@ Rules:
 
         {chatError && (
           <div style={{
-            fontSize: "13px", color: "var(--color-text-danger)", textAlign: "center",
+            fontSize: "var(--font-body)", color: "var(--color-text-danger)", textAlign: "center",
             padding: "8px", background: "var(--color-background-danger)",
             borderRadius: "var(--border-radius-md)"
           }}>{chatError}</div>
@@ -460,16 +459,16 @@ Rules:
             border: "0.5px solid var(--color-border-tertiary)",
             borderTop: "3px solid var(--color-border-info)",
             borderRadius: "var(--border-radius-lg)",
-            padding: "1.25rem"
+            padding: "var(--spacing-card)"
           }}>
             <div style={{
-              fontSize: "11px", color: "var(--color-text-info)",
+              fontSize: "var(--font-label)", color: "var(--color-text-info)",
               textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "14px"
             }}>Generated phrase</div>
-            <div style={{ fontSize: "1.45rem", lineHeight: "2.6", color: "var(--color-text-primary)", marginBottom: "4px" }}>
+            <div style={{ fontSize: "var(--font-phrase-generated)", lineHeight: "2.6", color: "var(--color-text-primary)", marginBottom: "4px" }}>
               <Ruby segs={generated.segs} readingMode={readingMode} />
             </div>
-            <div style={{ fontSize: "13px", color: "var(--color-text-secondary)", marginBottom: "16px" }}>
+            <div style={{ fontSize: "var(--font-body)", color: "var(--color-text-secondary)", marginBottom: "16px" }}>
               {generated.en}
             </div>
             <div style={{ display: "flex", gap: "8px" }}>

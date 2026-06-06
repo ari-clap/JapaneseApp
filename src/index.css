@@ -1,0 +1,76 @@
+/* ── Responsive scaling via CSS custom properties ───────────────────────────
+   Mobile is source of truth. Tablet and desktop scale up proportionally.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* Mobile defaults */
+:root {
+  --font-title-ja: 1.6rem;
+  --font-phrase: 1.35rem;
+  --font-phrase-generated: 1.45rem;
+  --font-label: 11px;
+  --font-body: 13px;
+  --font-header-title: 15px;
+
+  --spacing-page-x: 1rem;
+  --spacing-page-y: 1rem;
+  --spacing-header: 0.875rem 1.25rem;
+  --spacing-card: 1rem 1.25rem;
+
+  --cat-grid-cols: repeat(2, minmax(0, 1fr));
+  --cat-icon-size: 20px;
+}
+
+/* Tablet (≥ 700px) */
+@media (min-width: 700px) {
+  :root {
+    --font-title-ja: 2.2rem;
+    --font-phrase: 1.65rem;
+    --font-phrase-generated: 1.75rem;
+    --font-label: 13px;
+    --font-body: 15px;
+    --font-header-title: 18px;
+
+    --spacing-page-x: 1.75rem;
+    --spacing-page-y: 1.5rem;
+    --spacing-header: 1.25rem 1.75rem;
+    --spacing-card: 1.25rem 1.5rem;
+
+    --cat-grid-cols: repeat(3, minmax(0, 1fr));
+    --cat-icon-size: 26px;
+  }
+}
+
+/* Desktop (≥ 1100px) */
+@media (min-width: 1100px) {
+  :root {
+    --font-title-ja: 2.8rem;
+    --font-phrase: 1.9rem;
+    --font-phrase-generated: 2rem;
+    --font-label: 14px;
+    --font-body: 16px;
+    --font-header-title: 20px;
+
+    --spacing-page-x: 2.5rem;
+    --spacing-page-y: 2rem;
+    --spacing-header: 1.5rem 2.5rem;
+    --spacing-card: 1.5rem 1.75rem;
+
+    --cat-grid-cols: repeat(4, minmax(0, 1fr));
+    --cat-icon-size: 30px;
+  }
+}
+
+/* ── Sticky header ───────────────────────────────────────────────────────── */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* ── Category grid ───────────────────────────────────────────────────────── */
+.category-grid {
+  display: grid;
+  grid-template-columns: var(--cat-grid-cols);
+  gap: 8px;
+  padding: var(--spacing-page-y) var(--spacing-page-x);
+}

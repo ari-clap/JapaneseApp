@@ -4,7 +4,9 @@
       "Bash(npm install *)",
       "Bash(npm run *)",
       "Bash(curl -s http://localhost:5173/)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(node --input-type=module)",
+      "Bash(taskkill //F //IM node.exe)"
     ]
   }
 }
