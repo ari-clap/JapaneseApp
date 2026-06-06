@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { CATS } from "./data/phrases.js";
-import { store } from "./lib/store.js";
 import { convertReading, convertKana, PURE_PARTICLES, addRomajiSpacing } from "./lib/romaji.js";
 import { speak, stopSpeech, isSpeechSupported } from "./lib/speech.js";
+import { supabase, isSupabaseConfigured } from "./lib/supabase.js";
+import { signInWithGoogle, signOut } from "./lib/auth.js";
+import { loadPhrases, addPhrase, removePhrase, migrateLocalToCloud } from "./lib/phrasesStore.js";
 
 const CopyIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -169,65 +171,121 @@ function Header({ onBack, title, subtitle, right }) {
   );
 }
 
+const GoogleIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 48 48">
+    <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"/>
+    <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/>
+    <path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24s.85 6.91 2.34 9.88l7.35-5.7z"/>
+    <path fill="#EA4335" d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"/>
+  </svg>
+);
+
+// Sign-in banner (signed out) / account info (signed in). Only shows if Supabase
+// is configured; otherwise the app just runs on local storage as before.
+function AccountBar({ session }) {
+  if (!isSupabaseConfigured()) return null;
+
+  if (!session) {
+    return (
+      <div style={{
+        background: "var(--color-background-info)",
+        border: "0.5px solid var(--color-border-info)",
+        borderRadius: "var(--border-radius-lg)",
+        padding: "var(--spacing-card)",
+        marginBottom: "12px",
+        display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px"
+      }}>
+        <div style={{ fontSize: "var(--font-body)", color: "var(--color-text-info)" }}>
+          Sign in to save your phrases and sync them across devices.
+        </div>
+        <button onClick={signInWithGoogle} style={{
+          display: "flex", alignItems: "center", gap: "8px", flexShrink: 0,
+          background: "#fff", border: "0.5px solid var(--color-border-secondary)",
+          borderRadius: "var(--border-radius-md)", padding: "8px 14px",
+          cursor: "pointer", fontSize: "var(--font-body)", fontWeight: 500,
+          color: "var(--color-text-primary)"
+        }}>
+          <GoogleIcon /> Sign in
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px",
+      marginBottom: "12px", padding: "0 4px"
+    }}>
+      <div style={{ fontSize: "var(--font-label)", color: "var(--color-text-tertiary)", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {session.user?.email}
+      </div>
+      <button onClick={signOut} style={{
+        flexShrink: 0, background: "none", border: "0.5px solid var(--color-border-tertiary)",
+        borderRadius: "var(--border-radius-md)", padding: "4px 12px",
+        cursor: "pointer", fontSize: "var(--font-label)", color: "var(--color-text-secondary)"
+      }}>
+        Sign out
+      </button>
+    </div>
+  );
+}
+
 export default function App() {
   const [view, setView] = useState("home");
   const [selectedCat, setSelectedCat] = useState(null);
   const [customPhrases, setCustomPhrases] = useState([]);
   const [readingMode, setReadingMode] = useState('furigana');
-  const [chatInput, setChatInput] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-  const [generated, setGenerated] = useState(null);
-  const [chatError, setChatError] = useState("");
+  const [jaInput, setJaInput] = useState("");
+  const [enInput, setEnInput] = useState("");
+  const [session, setSession] = useState(null);
 
+  // Track the signed-in session (only if Supabase is configured).
   useEffect(() => {
-    store.get("jp_custom_phrases").then(v => {
-      if (v) { try { setCustomPhrases(JSON.parse(v)); } catch {} }
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
     });
+    return () => sub.subscription.unsubscribe();
   }, []);
 
-  const persistPhrases = (phrases) => {
-    setCustomPhrases(phrases);
-    store.set("jp_custom_phrases", JSON.stringify(phrases));
+  // Load phrases whenever the session changes (signed in → cloud, out → local).
+  // Migrating first is a no-op unless there are local phrases to push up.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (supabase && session) await migrateLocalToCloud(session);
+        const phrases = await loadPhrases(session);
+        if (!cancelled) setCustomPhrases(phrases);
+      } catch {
+        if (!cancelled) setCustomPhrases([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [session]);
+
+  const deletePhrase = async (id) => {
+    setCustomPhrases(prev => prev.filter(p => p.id !== id));
+    try { await removePhrase(session, id); }
+    catch { setCustomPhrases(await loadPhrases(session)); }
   };
 
-  const deletePhrase = (id) => persistPhrases(customPhrases.filter(p => p.id !== id));
+  const savePhrase = async (phrase) => {
+    const saved = await addPhrase(session, phrase);
+    setCustomPhrases(prev => [...prev, saved]);
+  };
 
-  const resetChat = () => { setGenerated(null); setChatInput(""); setChatError(""); };
+  const resetForm = () => { setJaInput(""); setEnInput(""); };
 
-  const generatePhrase = async () => {
-    if (!chatInput.trim() || chatLoading) return;
-    setChatLoading(true);
-    setChatError("");
-    setGenerated(null);
-    try {
-      // NOTE: This calls Anthropic directly, which only works inside the Claude
-      // preview environment. In production this will move behind a serverless
-      // function (see the auth/AI phase) so the API key stays secret.
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: `You are a Japanese phrase assistant for N5-N4 learners. Given an English description or phrase, return ONLY a valid JSON object with no markdown fences, no preamble, no explanation — just raw JSON:
-{"en":"English translation","segs":[{"t":"text segment","r":"furigana (omit if kana only)"}]}
-Rules:
-- Include "r" only for kanji or kanji compounds that need furigana
-- Omit "r" entirely for hiragana or katakana segments
-- Split text so each kanji/compound gets its own segment with "r"
-- Pure kana sequences can be single segments without "r"
-- Keep vocabulary at N5-N4 level
-- Return ONLY the JSON object`,
-          messages: [{ role: "user", content: chatInput }]
-        })
-      });
-      const data = await res.json();
-      const raw = (data.content?.[0]?.text ?? "").replace(/```json|```/g, "").trim();
-      setGenerated(JSON.parse(raw));
-    } catch {
-      setChatError("Could not generate a phrase. Please try again.");
-    }
-    setChatLoading(false);
+  const handleAddPhrase = async () => {
+    if (!jaInput.trim()) return;
+    // Store the typed Japanese as a single segment (no furigana). Voice, copy,
+    // and kana→romaji all still work; kanji simply won't get readings.
+    const phrase = { en: enInput.trim(), segs: [{ t: jaInput.trim() }] };
+    await savePhrase(phrase);
+    resetForm();
+    setView("myphrases");
   };
 
   const readingToggle = (
@@ -360,7 +418,7 @@ Rules:
         right={
           <div style={{ display: "flex", gap: "8px" }}>
             {readingToggle}
-            <button onClick={() => { resetChat(); setView("chat"); }} style={{
+            <button onClick={() => { resetForm(); setView("chat"); }} style={{
               background: "var(--color-background-primary)",
               border: "0.5px solid var(--color-border-secondary)",
               borderRadius: "var(--border-radius-md)",
@@ -371,6 +429,7 @@ Rules:
         }
       />
       <div style={{ padding: "var(--spacing-page-y) var(--spacing-page-x)" }}>
+        <AccountBar session={session} />
         {customPhrases.length === 0 ? (
           <div style={{ textAlign: "center", padding: "3rem 1rem" }}>
             <div style={{
@@ -378,7 +437,7 @@ Rules:
               color: "var(--color-text-tertiary)", marginBottom: "10px", fontWeight: 300
             }}>まだありません</div>
             <div style={{ fontSize: "var(--font-body)", color: "var(--color-text-tertiary)", lineHeight: "1.6" }}>
-              No custom phrases yet.<br />Tap <strong>+ Add</strong> to generate one with AI.
+              No custom phrases yet.<br />Tap <strong>+ Add</strong> to save your own.
             </div>
           </div>
         ) : (
@@ -390,120 +449,92 @@ Rules:
     </div>
   );
 
-  // ── Chat / Generate ────────────────────────────────────────────────────────
-  if (view === "chat") return (
+  // ── Add a phrase (manual) ───────────────────────────────────────────────────
+  if (view === "chat") {
+    const inputStyle = {
+      width: "100%", border: "none", outline: "none", resize: "none",
+      fontSize: "var(--font-body)", lineHeight: "1.6", color: "var(--color-text-primary)",
+      background: "transparent", fontFamily: "inherit", boxSizing: "border-box"
+    };
+    const fieldStyle = {
+      background: "var(--color-background-primary)",
+      border: "0.5px solid var(--color-border-tertiary)",
+      borderRadius: "var(--border-radius-lg)",
+      padding: "var(--spacing-card)"
+    };
+    const labelStyle = {
+      fontSize: "var(--font-label)", color: "var(--color-text-tertiary)",
+      textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px"
+    };
+    return (
     <div style={{ minHeight: "100vh", background: "var(--color-background-tertiary)", display: "flex", flexDirection: "column" }}>
       <Header
-        onBack={() => { resetChat(); setView("myphrases"); }}
+        onBack={() => { resetForm(); setView("myphrases"); }}
         title="Add a phrase"
-        subtitle="Describe what you want to say in English"
+        subtitle="Type a Japanese phrase to save"
       />
 
       <div style={{ flex: 1, padding: "var(--spacing-page-y) var(--spacing-page-x)", display: "flex", flexDirection: "column", gap: "12px" }}>
-        <div style={{
-          background: "var(--color-background-primary)",
-          border: "0.5px solid var(--color-border-tertiary)",
-          borderRadius: "var(--border-radius-lg)",
-          padding: "var(--spacing-card)"
-        }}>
-          <div style={{
-            fontSize: "var(--font-label)", color: "var(--color-text-tertiary)",
-            textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "10px"
-          }}>What do you want to say?</div>
+        {/* Japanese phrase */}
+        <div style={fieldStyle}>
+          <div style={labelStyle}>Japanese phrase</div>
           <textarea
-            value={chatInput}
-            onChange={e => setChatInput(e.target.value)}
-            placeholder={'e.g. "How do I ask to send my luggage to another hotel?"'}
-            rows={3}
-            style={{
-              width: "100%", border: "none", outline: "none", resize: "none",
-              fontSize: "var(--font-body)", lineHeight: "1.6", color: "var(--color-text-primary)",
-              background: "transparent", fontFamily: "inherit",
-              boxSizing: "border-box"
-            }}
-            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); generatePhrase(); } }}
+            value={jaInput}
+            onChange={e => setJaInput(e.target.value)}
+            placeholder="例: ありがとうございます"
+            rows={2}
+            style={{ ...inputStyle, fontFamily: "'Noto Sans JP', sans-serif" }}
           />
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "8px" }}>
-            <button
-              onClick={generatePhrase}
-              disabled={chatLoading || !chatInput.trim()}
-              style={{
-                background: chatLoading || !chatInput.trim()
-                  ? "var(--color-background-secondary)"
-                  : "var(--color-background-primary)",
-                border: "0.5px solid var(--color-border-secondary)",
-                color: chatLoading || !chatInput.trim()
-                  ? "var(--color-text-tertiary)"
-                  : "var(--color-text-primary)",
-                borderRadius: "var(--border-radius-md)",
-                padding: "6px 16px", cursor: chatLoading ? "wait" : "pointer",
-                fontSize: "var(--font-body)", fontWeight: 500
-              }}
-            >
-              {chatLoading ? "Generating…" : "Generate →"}
-            </button>
-          </div>
         </div>
 
-        {chatError && (
-          <div style={{
-            fontSize: "var(--font-body)", color: "var(--color-text-danger)", textAlign: "center",
-            padding: "8px", background: "var(--color-background-danger)",
-            borderRadius: "var(--border-radius-md)"
-          }}>{chatError}</div>
-        )}
+        {/* English meaning (optional) */}
+        <div style={fieldStyle}>
+          <div style={labelStyle}>English meaning <span style={{ textTransform: "none", letterSpacing: 0 }}>(optional)</span></div>
+          <input
+            value={enInput}
+            onChange={e => setEnInput(e.target.value)}
+            placeholder="e.g. Thank you very much"
+            style={inputStyle}
+            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleAddPhrase(); } }}
+          />
+        </div>
 
-        {generated && (
+        {/* Live preview */}
+        {jaInput.trim() && (
           <div style={{
-            background: "var(--color-background-primary)",
-            border: "0.5px solid var(--color-border-tertiary)",
-            borderTop: "3px solid var(--color-border-info)",
-            borderRadius: "var(--border-radius-lg)",
-            padding: "var(--spacing-card)"
+            ...fieldStyle,
+            borderTop: "3px solid var(--color-border-info)"
           }}>
-            <div style={{
-              fontSize: "var(--font-label)", color: "var(--color-text-info)",
-              textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "14px"
-            }}>Generated phrase</div>
-            <div style={{ fontSize: "var(--font-phrase-generated)", lineHeight: "2.6", color: "var(--color-text-primary)", marginBottom: "4px" }}>
-              <Ruby segs={generated.segs} readingMode={readingMode} />
+            <div style={{ ...labelStyle, color: "var(--color-text-info)" }}>Preview</div>
+            <div style={{ fontSize: "var(--font-phrase-generated)", lineHeight: readingMode === 'romaji' ? "1.6" : "2.6", color: "var(--color-text-primary)" }}>
+              <Ruby segs={[{ t: jaInput.trim() }]} readingMode={readingMode} />
             </div>
-            <div style={{ fontSize: "var(--font-body)", color: "var(--color-text-secondary)", marginBottom: "16px" }}>
-              {generated.en}
-            </div>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button
-                onClick={() => {
-                  persistPhrases([...customPhrases, { ...generated, id: "c_" + Date.now() }]);
-                  resetChat();
-                  setView("myphrases");
-                }}
-                style={{
-                  flex: 1,
-                  background: "var(--color-background-primary)",
-                  border: "0.5px solid var(--color-border-secondary)",
-                  borderRadius: "var(--border-radius-md)",
-                  padding: "10px", cursor: "pointer",
-                  fontSize: "13px", fontWeight: 500, color: "var(--color-text-primary)"
-                }}
-              >Save phrase</button>
-              <button
-                onClick={resetChat}
-                style={{
-                  flex: 1,
-                  background: "var(--color-background-secondary)",
-                  border: "0.5px solid var(--color-border-tertiary)",
-                  borderRadius: "var(--border-radius-md)",
-                  padding: "10px", cursor: "pointer",
-                  fontSize: "13px", color: "var(--color-text-secondary)"
-                }}
-              >Discard</button>
-            </div>
+            {enInput.trim() && (
+              <div style={{ fontSize: "var(--font-body)", color: "var(--color-text-secondary)", marginTop: "4px" }}>
+                {enInput.trim()}
+              </div>
+            )}
           </div>
         )}
+
+        <button
+          onClick={handleAddPhrase}
+          disabled={!jaInput.trim()}
+          style={{
+            background: jaInput.trim() ? "var(--color-background-primary)" : "var(--color-background-secondary)",
+            border: "0.5px solid var(--color-border-secondary)",
+            color: jaInput.trim() ? "var(--color-text-primary)" : "var(--color-text-tertiary)",
+            borderRadius: "var(--border-radius-md)",
+            padding: "12px", cursor: jaInput.trim() ? "pointer" : "default",
+            fontSize: "var(--font-body)", fontWeight: 500
+          }}
+        >
+          Save phrase
+        </button>
       </div>
     </div>
-  );
+    );
+  }
 
   return null;
 }
