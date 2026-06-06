@@ -2,11 +2,24 @@ import { useState, useEffect } from "react";
 import { CATS } from "./data/phrases.js";
 import { store } from "./lib/store.js";
 import { convertReading, convertKana, PURE_PARTICLES, addRomajiSpacing } from "./lib/romaji.js";
+import { speak, stopSpeech, isSpeechSupported } from "./lib/speech.js";
 
 const CopyIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="9" y="9" width="13" height="13" rx="2"/>
     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+  </svg>
+);
+
+const SpeakerIcon = ({ playing }) => playing ? (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+  </svg>
+) : (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
   </svg>
 );
 
@@ -49,12 +62,28 @@ function Ruby({ segs, readingMode = 'furigana' }) {
 
 function PhraseCard({ phrase, readingMode, deletable, onDelete }) {
   const [copied, setCopied] = useState(false);
+  const [playing, setPlaying] = useState(false);
+
   const copy = () => {
     const text = phrase.segs.map(s => s.t).join("");
     navigator.clipboard?.writeText(text).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
+
+  const handleSpeak = () => {
+    if (playing) {
+      stopSpeech();
+      setPlaying(false);
+      return;
+    }
+    const text = phrase.segs.map(s => s.t).join("");
+    speak(text, {
+      onStart: () => setPlaying(true),
+      onEnd: () => setPlaying(false),
+    });
+  };
+
   return (
     <div style={{
       background: "var(--color-background-primary)",
@@ -74,6 +103,19 @@ function PhraseCard({ phrase, readingMode, deletable, onDelete }) {
         <div style={{ fontSize: "13px", color: "var(--color-text-secondary)", marginTop: "2px" }}>{phrase.en}</div>
       </div>
       <div style={{ display: "flex", gap: "6px", flexShrink: 0, paddingTop: "6px" }}>
+        {isSpeechSupported() && (
+          <button onClick={handleSpeak} title="Hear pronunciation" style={{
+            background: playing ? "var(--color-background-info)" : "none",
+            border: "0.5px solid var(--color-border-tertiary)",
+            borderRadius: "var(--border-radius-md)",
+            cursor: "pointer", padding: "4px 6px",
+            color: playing ? "var(--color-text-info)" : "var(--color-text-secondary)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "all 0.15s"
+          }}>
+            <SpeakerIcon playing={playing} />
+          </button>
+        )}
         <button onClick={copy} title="Copy Japanese" style={{
           background: copied ? "var(--color-background-success)" : "none",
           border: "0.5px solid var(--color-border-tertiary)",
