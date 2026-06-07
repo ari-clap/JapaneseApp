@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CATS } from "./data/phrases.js";
 import { convertReading, convertKana, PURE_PARTICLES, addRomajiSpacing } from "./lib/romaji.js";
 import { speak, stopSpeech, isSpeechSupported, getJapaneseVoices } from "./lib/speech.js";
@@ -246,6 +246,98 @@ function AccountBar({ session }) {
   );
 }
 
+function FuriganaBanner({ visible, bannerState, dlProgress, onDownload, onDismiss }) {
+  const done = bannerState === 'complete';
+  const accentColor = done ? "var(--color-border-success)" : "var(--color-border-info)";
+  const iconBg     = done ? "var(--color-background-success)" : "var(--color-background-info)";
+  const iconBorder = done ? "0.5px solid var(--color-border-success)" : "0.5px solid var(--color-border-info)";
+  return (
+    <div className={`furigana-banner-wrap${visible ? ' visible' : ''}`}>
+      <div style={{
+        background: "var(--color-background-primary)",
+        border: "0.5px solid var(--color-border-tertiary)",
+        borderLeft: `4px solid ${accentColor}`,
+        borderRadius: "var(--border-radius-lg)",
+        boxShadow: "0 4px 20px rgba(0,0,0,.11), 0 1px 4px rgba(0,0,0,.05)",
+        padding: "13px 15px 13px 14px",
+        display: "flex", flexDirection: "column", gap: "10px",
+        minHeight: "82px", justifyContent: "center",
+        transition: "border-left-color .5s"
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+          {/* Icon square */}
+          <div style={{
+            width: "32px", height: "32px", borderRadius: "8px",
+            background: iconBg, border: iconBorder, flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transition: "background .5s, border-color .5s"
+          }}>
+            {done ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                style={{ color: "var(--color-text-success)" }}>
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            ) : (
+              <span style={{ fontSize: "16px" }}>📚</span>
+            )}
+          </div>
+          {/* Body */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {bannerState === 'offer' && (
+              <>
+                <div style={{ fontSize: "var(--font-body)", fontWeight: 600, color: "var(--color-text-primary)" }}>
+                  Add furigana to your phrases
+                </div>
+                <div style={{ fontSize: "var(--font-label)", color: "var(--color-text-tertiary)", marginTop: "2px", lineHeight: "1.4" }}>
+                  One-time download · ~7 MB · works offline after
+                </div>
+                <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
+                  <button onClick={onDismiss} style={{
+                    background: "none", border: "0.5px solid var(--color-border-secondary)",
+                    borderRadius: "var(--border-radius-md)", padding: "6px 12px",
+                    cursor: "pointer", fontSize: "var(--font-label)", color: "var(--color-text-secondary)", fontFamily: "inherit"
+                  }}>Not now</button>
+                  <button onClick={onDownload} style={{
+                    background: "var(--color-background-info)", border: "0.5px solid var(--color-border-info)",
+                    borderRadius: "var(--border-radius-md)", padding: "6px 14px",
+                    cursor: "pointer", fontSize: "var(--font-label)", fontWeight: 600,
+                    color: "var(--color-text-info)", fontFamily: "inherit"
+                  }}>Download</button>
+                </div>
+              </>
+            )}
+            {bannerState === 'downloading' && (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                  <span style={{ fontSize: "var(--font-body)", fontWeight: 500, color: "var(--color-text-secondary)" }}>Downloading…</span>
+                  <span style={{ fontSize: "var(--font-body)", fontWeight: 700, color: "var(--color-text-info)" }}>{dlProgress}%</span>
+                </div>
+                <div style={{ height: "8px", background: "#E9E9EB", borderRadius: "99px", overflow: "hidden" }}>
+                  <div className="furigana-progress-fill" style={{
+                    width: `${dlProgress}%`,
+                    ...(dlProgress >= 100 ? { background: "linear-gradient(90deg,#7BB33A,#3B6D11)" } : {})
+                  }}/>
+                </div>
+              </>
+            )}
+            {done && (
+              <>
+                <div style={{ fontSize: "var(--font-body)", fontWeight: 600, color: "var(--color-text-success)" }}>
+                  Furigana ready
+                </div>
+                <div style={{ fontSize: "var(--font-label)", color: "var(--color-text-tertiary)", marginTop: "2px" }}>
+                  Phrases you add will now show readings automatically.
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [view, setView] = useState("home");
   const [selectedCat, setSelectedCat] = useState(null);
@@ -258,6 +350,9 @@ export default function App() {
   const [voices, setVoices] = useState([]);
   const [furiganaReady, setFuriganaReady] = useState(false);
   const [computedSegs, setComputedSegs] = useState(null);
+  const [bannerState, setBannerState] = useState('hidden'); // hidden|offer|downloading|complete|dismissed
+  const downloadSourceRef = useRef('banner'); // 'banner' | 'settings'
+  const [dlProgress, setDlProgress] = useState(0);
 
   // Track the signed-in session (only if Supabase is configured).
   useEffect(() => {
@@ -305,14 +400,49 @@ export default function App() {
     return () => window.speechSynthesis.removeEventListener('voiceschanged', load);
   }, []);
 
-  // Lazy-load the kuromoji dictionary the first time the Add view opens.
+  // Show the offer banner the first time the user opens the Add view.
   useEffect(() => {
     if (view !== "chat") return;
     if (isFuriganaReady()) { setFuriganaReady(true); return; }
-    initFurigana()
-      .then(() => setFuriganaReady(true))
-      .catch(err => console.warn('Furigana init failed:', err));
+    if (bannerState === 'hidden') setBannerState('offer');
   }, [view]);
+
+  const handleBannerDownload = () => {
+    setBannerState('downloading');
+    setDlProgress(0);
+    // Simulate progress while kuromoji fetches its dictionary (~7 MB).
+    // On localhost the dict is served from disk and loads in < 200 ms, so we
+    // enforce a minimum visible animation of 2 s so the progress bar always
+    // plays out. On production it loads over the network and takes longer.
+    const MIN_MS = 2000;
+    const startedAt = Date.now();
+    let sim = 0;
+    const timer = setInterval(() => {
+      sim = Math.min(88, sim + Math.max(0.4, (88 - sim) * 0.055));
+      setDlProgress(Math.round(sim));
+    }, 180);
+    initFurigana()
+      .then(() => {
+        const elapsed = Date.now() - startedAt;
+        const remaining = Math.max(0, MIN_MS - elapsed);
+        setTimeout(() => {
+          clearInterval(timer);
+          setDlProgress(100);
+          setTimeout(() => {
+            setBannerState('complete');
+            setFuriganaReady(true);
+            setTimeout(() => setBannerState('dismissed'), 3500);
+          }, 350);
+        }, remaining);
+      })
+      .catch(err => {
+        clearInterval(timer);
+        console.warn('Furigana download failed:', err);
+        setBannerState('hidden');
+      });
+  };
+
+  const handleBannerDismiss = () => setBannerState('dismissed');
 
   // Recompute segs 300 ms after the user stops typing.
   useEffect(() => {
@@ -383,6 +513,22 @@ export default function App() {
         }}>{label}</button>
       ))}
     </div>
+  );
+
+  const fromSettings = downloadSourceRef.current === 'settings';
+  const bannerVisible =
+    (bannerState === 'offer' && view === 'chat') ||
+    (bannerState === 'downloading' && !fromSettings) ||
+    (bannerState === 'complete'   && !fromSettings);
+
+  const banner = (
+    <FuriganaBanner
+      visible={bannerVisible}
+      bannerState={bannerState}
+      dlProgress={dlProgress}
+      onDownload={handleBannerDownload}
+      onDismiss={handleBannerDismiss}
+    />
   );
 
   // ── Home ──────────────────────────────────────────────────────────────────
@@ -461,6 +607,7 @@ export default function App() {
           </span>
         </button>
       </div>
+      {banner}
     </div>
   );
 
@@ -478,6 +625,7 @@ export default function App() {
           <PhraseCard key={p.id} phrase={p} readingMode={readingMode} deletable={false} voiceName={selectedVoice} />
         ))}
       </div>
+      {banner}
     </div>
   );
 
@@ -519,6 +667,7 @@ export default function App() {
           ))
         )}
       </div>
+      {banner}
     </div>
   );
 
@@ -575,13 +724,8 @@ export default function App() {
         {/* Live preview */}
         {jaInput.trim() && (
           <div style={{ ...fieldStyle, borderTop: "3px solid var(--color-border-info)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+            <div style={{ display: "flex", alignItems: "center", marginBottom: "8px" }}>
               <div style={{ ...labelStyle, color: "var(--color-text-info)", marginBottom: 0 }}>Preview</div>
-              {!furiganaReady && (
-                <div style={{ fontSize: "var(--font-label)", color: "var(--color-text-tertiary)" }}>
-                  Loading furigana…
-                </div>
-              )}
             </div>
             <div style={{ fontSize: "var(--font-phrase-generated)", lineHeight: "2.6", color: "var(--color-text-primary)" }}>
               <Ruby segs={computedSegs ?? [{ t: jaInput.trim() }]} readingMode={readingMode} />
@@ -609,6 +753,7 @@ export default function App() {
           Save phrase
         </button>
       </div>
+      {banner}
     </div>
     );
   }
@@ -722,9 +867,10 @@ export default function App() {
                 {/* Test voice — full width */}
                 <button onClick={() => speak('こんにちは', { voiceName: selectedVoice || undefined })} style={{
                   width: "100%", height: CTRL_H,
-                  background: "none", border: "0.5px solid var(--color-border-tertiary)",
+                  background: "#E9E9EB", border: "none",
                   borderRadius: "var(--border-radius-md)",
                   cursor: "pointer", fontSize: "var(--font-body)", color: "var(--color-text-secondary)",
+                  fontWeight: 500,
                   display: "flex", alignItems: "center", justifyContent: "center", gap: "6px"
                 }}>
                   <SpeakerIcon playing={false} /> Test voice
@@ -734,7 +880,68 @@ export default function App() {
             )}
           </div>
 
+        {/* ── Furigana card ── */}
+          <div style={{
+            background: "var(--color-background-primary)",
+            border: "0.5px solid var(--color-border-tertiary)",
+            borderRadius: "var(--border-radius-lg)",
+            padding: "var(--spacing-card)"
+          }}>
+            {/* Header row */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: furiganaReady ? "0" : "20px" }}>
+              <div style={{ fontSize: "var(--font-label)", color: "var(--color-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                Furigana
+              </div>
+              {furiganaReady && (
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "var(--font-body)", color: "var(--color-text-success)", fontWeight: 500 }}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <circle cx="7" cy="7" r="6.5" stroke="var(--color-border-success)" strokeWidth="1"/>
+                    <path d="M4 7l2.2 2.2L10 5" stroke="var(--color-text-success)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Ready
+                </div>
+              )}
+            </div>
+
+            {!furiganaReady && bannerState !== 'downloading' && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ fontSize: "var(--font-body)", color: "var(--color-text-secondary)", lineHeight: "1.5" }}>
+                  Download the Japanese dictionary to add furigana (reading hints) to phrases you type.
+                </div>
+                <button
+                  onClick={() => { downloadSourceRef.current = 'settings'; handleBannerDownload(); }}
+                  style={{
+                    width: "100%", height: CTRL_H,
+                    background: "var(--color-border-info)", border: "none",
+                    borderRadius: "var(--border-radius-md)",
+                    cursor: "pointer", fontSize: "var(--font-body)", fontWeight: 500, color: "#fff",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                  }}
+                >
+                  Download (~7 MB)
+                </button>
+              </div>
+            )}
+
+            {/* Inline progress — only shown when download was triggered from this card */}
+            {!furiganaReady && bannerState === 'downloading' && downloadSourceRef.current === 'settings' && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "var(--font-body)", color: "var(--color-text-secondary)" }}>Downloading…</span>
+                  <span style={{ fontSize: "var(--font-body)", fontWeight: 700, color: "var(--color-text-info)" }}>{dlProgress}%</span>
+                </div>
+                <div style={{ height: "8px", background: "#E9E9EB", borderRadius: "99px", overflow: "hidden" }}>
+                  <div className="furigana-progress-fill" style={{
+                    width: `${dlProgress}%`,
+                    ...(dlProgress >= 100 ? { background: "linear-gradient(90deg,#7BB33A,#3B6D11)" } : {})
+                  }} />
+                </div>
+              </div>
+            )}
+          </div>
+
         </div>
+        {banner}
       </div>
     );
   }
