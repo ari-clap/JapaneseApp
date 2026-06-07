@@ -5,6 +5,7 @@ import { speak, stopSpeech, isSpeechSupported, getJapaneseVoices } from "./lib/s
 import { supabase, isSupabaseConfigured } from "./lib/supabase.js";
 import { signInWithGoogle, signOut } from "./lib/auth.js";
 import { loadPhrases, addPhrase, removePhrase, migrateLocalToCloud } from "./lib/phrasesStore.js";
+import { initFurigana, textToSegs, isFuriganaReady } from "./lib/furigana.js";
 
 const GearIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -255,6 +256,8 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('jp_voice') || '');
   const [voices, setVoices] = useState([]);
+  const [furiganaReady, setFuriganaReady] = useState(false);
+  const [computedSegs, setComputedSegs] = useState(null);
 
   // Track the signed-in session (only if Supabase is configured).
   useEffect(() => {
@@ -302,6 +305,25 @@ export default function App() {
     return () => window.speechSynthesis.removeEventListener('voiceschanged', load);
   }, []);
 
+  // Lazy-load the kuromoji dictionary the first time the Add view opens.
+  useEffect(() => {
+    if (view !== "chat") return;
+    if (isFuriganaReady()) { setFuriganaReady(true); return; }
+    initFurigana()
+      .then(() => setFuriganaReady(true))
+      .catch(err => console.warn('Furigana init failed:', err));
+  }, [view]);
+
+  // Recompute segs 300 ms after the user stops typing.
+  useEffect(() => {
+    if (!furiganaReady || !jaInput.trim()) { setComputedSegs(null); return; }
+    const t = setTimeout(() => {
+      try { setComputedSegs(textToSegs(jaInput.trim())); }
+      catch { setComputedSegs([{ t: jaInput.trim() }]); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [jaInput, furiganaReady]);
+
   const handleVoiceChange = (name) => {
     setSelectedVoice(name);
     localStorage.setItem('jp_voice', name);
@@ -318,14 +340,13 @@ export default function App() {
     setCustomPhrases(prev => [...prev, saved]);
   };
 
-  const resetForm = () => { setJaInput(""); setEnInput(""); };
+  const resetForm = () => { setJaInput(""); setEnInput(""); setComputedSegs(null); };
 
   const handleAddPhrase = async () => {
     if (!jaInput.trim()) return;
-    // Store the typed Japanese as a single segment (no furigana). Voice, copy,
-    // and kana→romaji all still work; kanji simply won't get readings.
-    const phrase = { en: enInput.trim(), segs: [{ t: jaInput.trim() }] };
-    await savePhrase(phrase);
+    // Use kuromoji segs if ready, otherwise fall back to a plain segment.
+    const segs = computedSegs ?? [{ t: jaInput.trim() }];
+    await savePhrase({ en: enInput.trim(), segs });
     resetForm();
     setView("myphrases");
   };
@@ -553,13 +574,17 @@ export default function App() {
 
         {/* Live preview */}
         {jaInput.trim() && (
-          <div style={{
-            ...fieldStyle,
-            borderTop: "3px solid var(--color-border-info)"
-          }}>
-            <div style={{ ...labelStyle, color: "var(--color-text-info)" }}>Preview</div>
-            <div style={{ fontSize: "var(--font-phrase-generated)", lineHeight: readingMode === 'romaji' ? "1.6" : "2.6", color: "var(--color-text-primary)" }}>
-              <Ruby segs={[{ t: jaInput.trim() }]} readingMode={readingMode} />
+          <div style={{ ...fieldStyle, borderTop: "3px solid var(--color-border-info)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+              <div style={{ ...labelStyle, color: "var(--color-text-info)", marginBottom: 0 }}>Preview</div>
+              {!furiganaReady && (
+                <div style={{ fontSize: "var(--font-label)", color: "var(--color-text-tertiary)" }}>
+                  Loading furigana…
+                </div>
+              )}
+            </div>
+            <div style={{ fontSize: "var(--font-phrase-generated)", lineHeight: "2.6", color: "var(--color-text-primary)" }}>
+              <Ruby segs={computedSegs ?? [{ t: jaInput.trim() }]} readingMode={readingMode} />
             </div>
             {enInput.trim() && (
               <div style={{ fontSize: "var(--font-body)", color: "var(--color-text-secondary)", marginTop: "4px" }}>
