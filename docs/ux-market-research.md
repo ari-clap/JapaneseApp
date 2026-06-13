@@ -19,6 +19,13 @@ Translate). It lives in the gap between them — see [§5](#5-market-research).
 
 ## 1. Who is the audience?
 
+> ⚠️ **Read with [§8](#8-traveler-behavior-research--what-tourists-actually-do-2026-06-13).**
+> The personas below were first sketched partly from the app's personal seed content.
+> §8 is the *market-based, evidence-backed* revision and supersedes the framing here
+> where they conflict. The real reachable core market is the **"effort traveler"**
+> (wants to say a few things warmly), with **specific-need travelers** as the
+> differentiated wedge — not the general translator-using majority.
+
 ### Macro context (why now)
 - Japan hit a **record 42.7M international visitors in 2025** (+15.8% YoY; first
   time over 40M; ~10M above the 2019 pre-pandemic peak). Inbound tourism is
@@ -222,6 +229,100 @@ speaks your situation."*
   quality is a differentiator vs synthetic-audio phrasebooks; revisit.
 - **Localization of the *source* language** — English-first now; Korea/China are the
   biggest inbound markets long-term.
+
+---
+
+## 8. Traveler behavior research — what tourists actually do (2026-06-13)
+
+> Added after a deliberate pass to look beyond the app's original (personal) seed
+> content and understand the **broad tourist population**. This section is the
+> evidence base; where it challenges earlier assumptions, the evidence wins.
+
+### 8.1 The hard numbers
+- **42.7M** international visitors in 2025 (record); structural growth + weak yen.
+- **English proficiency in Japan is "Very Low"** — ranked **96th of 123** countries
+  in the 2025 EF EPI. Spoken English is genuinely limited, even in big cities.
+- **Communication is the #1 reported problem** for visitors (Japan Tourism Agency
+  survey, 4,189 travelers, Jul–Dec 2024): **15.2%** struggled to communicate with
+  restaurant/shop/station/hotel staff; **10.8%** had trouble with multilingual
+  signage; only 6.1% cited Wi-Fi. Language > everything else.
+- **But you *can* get by** in Tokyo/Kyoto/Osaka and tourist hotspots (bilingual
+  signage, some staff English). **Rural Japan = barely any English.**
+
+### 8.2 What tourists actually do (behavior segmentation)
+The honest reality: most tourists are **task-oriented, not learning-oriented.** Ranked
+by how common the behavior is:
+
+| Behavior | How common | What it's used for | Tool |
+|---|---|---|---|
+| **Point the phone / translate** | **Dominant default** | Menus, signs, complex requests, anything hard | Google Translate (camera + voice), Papago, VoiceTra |
+| **Speak English slowly + gestures + smile** | Very common | Quick interactions in tourist areas where staff have some English | None |
+| **Workarounds to avoid talking** | Common | Taxis (written address cards), trains (IC/Suica cards), pointing at menus | Suica, screenshots |
+| **Learn a *handful* of courtesy phrases** | Minority but meaningful | Greetings, "please/thank you/excuse me/sorry" | Phrasebook / app / blog list |
+| **Actually study the language for the trip** | Small | Genuine effort, usually enthusiasts | Duolingo, etc. |
+
+### 8.3 The key behavioral insight (and the honest tension)
+- **Do most people want to "learn phrases"? No.** For *functional* communication, the
+  default is **translation apps** — free, camera-based, good enough, owned by Google.
+  This is a brutal incumbent for the "translate everything" job. **TabiGO should not
+  try to beat Google Translate at translation.**
+- **But there is a real, repeatedly-documented desire to say a *few* things
+  themselves** — greetings, thanks, politeness, a food order. The motivation is
+  **emotional/social, not functional**: Japanese people respond warmly to visible
+  *effort*, and travelers want to **connect and show respect**. The mantra across
+  sources is **"effort over fluency"** — it doesn't matter if it's perfect.
+- These two behaviors are **not competitors — travelers do both**: courtesy phrases
+  for warmth, translator for the hard stuff. The job TabiGO can own is the **"say it
+  myself, warmly and correctly"** job that translators serve badly (pointing a screen
+  is the *opposite* of connection) and learning apps over-serve (too slow, too much).
+
+### 8.4 Revised audience model (market-based, not personal)
+Replaces the personal-seed assumption as the primary lens. Three real segments:
+
+| Segment | Size / willingness | What they want | TabiGO fit |
+|---|---|---|---|
+| **Pure translators** | Huge | Get tasks done, zero effort | ❌ Owned by Google Translate — don't fight here |
+| **"Effort travelers"** (the target) | Meaningful minority, emotionally invested | A curated set of phrases they can *confidently say* to connect/show respect — greetings, courtesy, ordering, key moments | ✅ **Core market.** Pronunciation confidence (audio), reading support, "say it right" |
+| **Specific-need travelers** | Niche but high-pain, high-loyalty | Reliable, **reusable** way to convey recurring specifics (diet/allergy/family/medical) that translators botch every time | ✅ **Differentiated wedge** — AI-generate once → save → reuse offline |
+
+The original personal seed content turns out to be a vivid example of the
+**specific-need** segment (vegetarian, soy-milk coffee, "this is my wife") — keep it as
+*a* persona, but the **"effort traveler" is the larger reachable market.**
+
+### 8.5 Implications for TabiGO (what the evidence changes)
+1. **Reposition away from "translation" and toward "speak with confidence & respect."**
+   The pitch is connection and courtesy, not utility. ("Say it yourself" was right;
+   "replace your translator" would be wrong.)
+2. **Pronunciation confidence is the real product value.** People fear mispronouncing.
+   Audio + the ability to *practice/hear* matters more than phrase quantity. Consider
+   shadowing/record-yourself later.
+3. **Curation > volume.** Don't chase "1000+ phrases" like the incumbent phrasebooks.
+   A tight, high-quality, *genuinely-useful-and-warm* set beats a dump. Lead with
+   greetings/courtesy/food — the phrases people actually *want to say*.
+4. **Two moments, two contexts:** acquisition often happens **pre-trip at home**
+   (desktop/planning, learning a few phrases before departure) while use happens **on
+   the street** (mobile, offline). Both UIs matter; offline is non-negotiable.
+5. **The specific-need wedge (AI-generate + save) is the strongest *unique* value** —
+   it's the one job neither Google nor static phrasebooks do. Protect and feature it.
+6. **Don't over-invest in being comprehensive** for functional translation — link out
+   to / coexist with Google Translate rather than competing with it.
+
+### 8.6 Honest risks & what still needs primary research
+- The **"effort traveler" segment may be smaller / lower willingness-to-pay** than
+  hoped. This is the central commercial risk and is **not yet validated** — it needs
+  primary research (traveler interviews/surveys), not just secondary reading.
+- **Google Translate is free and excellent** at the functional job; any feature that
+  competes head-on will lose.
+- Open question to test with real users: *when people say they "want to learn a few
+  phrases," will they actually open an app to do it — or just Google a list once and
+  forget?* Retention is the thing to prove.
+
+**Sources:** [Japan 2025 record visitors (Nippon.com)](https://www.nippon.com/en/japan-data/h02673/) ·
+[JTA communication survey (SoraNews24)](https://soranews24.com/2025/05/08/survey-asks-foreign-tourists-what-bothered-them-in-japan-more-than-half-gave-same-answer/) ·
+[Travel Voice: communication is #1 problem](https://www.travelvoice.jp/english/the-most-troublesome-thing-for-international-visitors-in-japan-is-communication-japan-tourism-agency-survey) ·
+[EF English Proficiency / Japan very low (The Navigatio)](https://thenavigatio.com/do-people-in-japan-speak-english/) ·
+[Travel without Japanese — effort over fluency (The Real Japan)](https://www.therealjapan.com/how-to-travel-in-japan-without-speaking-japanese/) ·
+[E-Housing: navigating the language barrier](https://e-housing.jp/post/english-in-japan-where-its-spoken-and-how-to-navigate-language-barriers)
 
 ---
 
