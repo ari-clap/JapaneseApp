@@ -191,6 +191,72 @@ between them.
 
 ---
 
+### 5.3 Direct competitors — apps chasing the *same* audience
+
+Zooming in from the broad three-camp map (§5.1) to the apps that target **our exact
+user: the traveler who wants to *say things themselves* in Japanese.** This excludes
+pure translators and full fluency courses, and focuses on travel-phrase / situational-
+speaking apps. (Added 2026-06-13.)
+
+| App | What it is | Pros | Cons (vs. our user's job) | Threat level |
+|---|---|---|---|---|
+| **SakuraSpeak** | AI speaking partner; travel role-play (order food, directions); "speak from day 1" | Modern; AI feedback on pronunciation/grammar; real travel scenarios; free to start; well-rated (4.4★); explicitly Japan-trip-positioned | It's a **practice/tutor** tool (pre-trip prep), not in-the-moment lookup; needs connectivity; no saved personal phrase deck; audio/UI rough edges | 🔴 **Highest** — closest modern overlap |
+| **Falou** | AI scenario speaking app, 20+ langs, "useful on day one" | Gets you talking immediately; all lessons scenario/traveler-based | AI inconsistent for non-European langs (incl. Japanese); practice-focused, not a field phrasebook; generic across many languages | 🟠 High |
+| **uTalk** | Phrasebook + speaking practice, 100+ langs, travel themes | Huge native-audio library; **record-yourself & compare**; offline mode; real-life topics (shopping, etc.) | No grammar/context; repetitive games; breadth-over-depth across 100+ langs = shallow per language; not Japan-specific | 🟠 High |
+| **Bravolol — Learn Japanese / Travel Phrasebook** | Classic category phrasebook | Native audio; play-aloud to staff; offline; font resize; keyword search | **Intrusive full-screen ads** (free tier); generic, static content; can make you sound rude (no politeness nuance); dated feel | 🟡 Medium |
+| **"Japanese Phrases for Travelers" / Simply Learn (many clones)** | Pre-translated phrase lists by category | Cheap/free; offline; broad coverage (700–1000+) | Static & impersonal; synthetic/uneven audio; volume-over-quality; weak/no save-your-own; inconsistent furigana/romaji control | 🟡 Medium |
+| **Drops** | Visual vocab via word-image, travel topics | Beautiful UX; fun; travel/food vocab | **Words, not phrases**; can't form real sentences to say; time-gated free tier | 🟢 Low |
+| **Mondly** | Scenario lessons + phrasebook, 33 langs | Conversation scenarios; built-in phrasebook; cheaper than majors (~$75/yr) | Course-paced; generic multi-language template; not trip-in-the-moment | 🟢 Low |
+| **Pimsleur (survival/travel units)** | Audio-first spoken lessons | Excellent for *speaking & retention*; natural phrases | Slow, linear, expensive; audio course ≠ quick field lookup | 🟢 Low |
+| **JapanesePod101 — Survival Phrases** | Podcast-style travel-phrase series | Lots of cultural context; Japan-specific; survival-focused | Passive listening; weak retention (heard 1–2×); not a quick-reference tool | 🟢 Low |
+
+### 5.4 Insights from the direct-competitor table
+
+1. **The lane splits into two jobs — and they're different from each other.**
+   - **"Practice speaking *before* the trip"** → SakuraSpeak, Falou, uTalk, Pimsleur,
+     JapanesePod101. AI tutors and audio courses. You rehearse at home.
+   - **"Find & say the *right phrase during* the trip"** → Bravolol & the phrasebook
+     clones. In-the-moment, offline — but **static and dumb.**
+   TabiGO's slot is the **second job done modern + personalized** — and almost nobody
+   occupies it well.
+
+2. **The biggest gap nobody fills:** an **offline, in-the-moment phrasebook that is
+   also smart** — AI that **generates *your* exact phrase and saves it to a reusable
+   personal deck**, with a clean furigana/romaji toggle. The AI apps do AI
+   *conversation practice*; none do AI *"give me the phrase I need right now and let me
+   keep it."* **This is TabiGO's whitespace.**
+
+3. **The most dangerous competitor is SakuraSpeak**, not Google. It's modern, AI-
+   powered, travel-scenario-based, free, and explicitly markets to Japan-trip-takers —
+   the same emotional "speak with confidence" pitch. **Differentiate hard:** TabiGO is
+   *in-the-field reference + personal saved phrases + offline*, not a chat tutor. Don't
+   try to out-tutor it; own the moment of *use*, not just *practice*.
+
+4. **Recurring competitor weaknesses = TabiGO's checklist of things to nail:**
+   intrusive ads (Bravolol), generic one-size content, **no politeness awareness**
+   ("sounding like a rude foreigner"), shallow breadth-over-depth across dozens of
+   languages, and dated UX. TabiGO can win on **clean ad-free UX, politeness-correct
+   curated phrases, Japan-only depth, and offline reliability.**
+
+5. **Volume is a trap.** Competitors compete on "1000+ phrases." Our research (§8)
+   says travelers want a *small set they'll actually say*. Curation + warmth + audio
+   confidence beats a bigger list.
+
+6. **Pricing whitespace:** the field is barbell-shaped — free-with-ads phrasebooks vs.
+   $75+/yr subscription courses. A **clean freemium** (free curated phrasebook; paid AI
+   generation + unlimited saved phrases) fits the gap. (Validate retention first — §8.)
+
+**Sources:** [SakuraSpeak](https://sakuraspeak.app/) ·
+[Falou review (BullishLang)](https://bullishlang.com/falou-review/) ·
+[uTalk review (FluentU)](https://www.fluentu.com/blog/reviews/utalk/) ·
+[Bravolol Travel Phrasebook](https://bravolol.com/travel-phrasebook/) ·
+[Drops review (Tofugu)](https://www.tofugu.com/japanese-learning-resources-database/drops/) ·
+[Mondly review (Educational App Store)](https://www.educationalappstore.com/app/mondly-learn-33-languages) ·
+[Pimsleur Japanese review (FluentU)](https://www.fluentu.com/blog/reviews/pimsleur-japanese/) ·
+[JapanesePod101 Survival Phrases](https://www.japanesepod101.com/lesson-library/survival-phrases)
+
+---
+
 ## 6. Strategic positioning & differentiation
 
 **Positioning statement:**
